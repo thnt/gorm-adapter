@@ -321,6 +321,8 @@ func (a *Adapter) createTable() error {
 			return err
 		}
 	}
+	
+	a.db = a.db.Scopes(a.casbinRuleTable()).Session(&gorm.Session{Context: a.db.Statement.Context})
 	return nil
 }
 
