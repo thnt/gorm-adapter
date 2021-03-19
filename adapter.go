@@ -49,8 +49,8 @@ type CasbinRule struct {
 	V5    string `gorm:"size:100"`
 }
 
-func (CasbinRule) TableName() string {
-	return "casbin_rule"
+func (c *CasbinRule) TableName() string {
+	return defaultTableName
 }
 
 type Filter struct {
@@ -143,7 +143,7 @@ func NewAdapter(driverName string, dataSourceName string, params ...interface{})
 		} else {
 			return nil, errors.New("wrong format")
 		}
-	} else if len(params) != 0{
+	} else if len(params) != 0 {
 		return nil, errors.New("too many parameters")
 	}
 
@@ -315,7 +315,7 @@ func (a *Adapter) createTable() error {
 
 	tableName := a.getFullTableName()
 	index := "idx_" + tableName
-	hasIndex := a.db.Migrator().HasIndex(t, index)
+	hasIndex := a.db.Scopes(a.casbinRuleTable()).Migrator().HasIndex(t, index)
 	if !hasIndex {
 		if err := a.db.Exec(fmt.Sprintf("CREATE UNIQUE INDEX %s ON %s (ptype,v0,v1,v2,v3,v4,v5)", index, tableName)).Error; err != nil {
 			return err
@@ -334,8 +334,10 @@ func (a *Adapter) dropTable() error {
 }
 
 func loadPolicyLine(line CasbinRule, model model.Model) {
-	var p = []string{line.Ptype,
-		line.V0, line.V1, line.V2, line.V3, line.V4, line.V5}
+	p := []string{
+		line.Ptype,
+		line.V0, line.V1, line.V2, line.V3, line.V4, line.V5,
+	}
 
 	var lineText string
 	if line.V5 != "" {
@@ -493,7 +495,7 @@ func (a *Adapter) AddPolicy(sec string, ptype string, rule []string) error {
 // RemovePolicy removes a policy rule from the storage.
 func (a *Adapter) RemovePolicy(sec string, ptype string, rule []string) error {
 	line := a.savePolicyLine(ptype, rule)
-	err := a.rawDelete(a.db, line) //can't use db.Delete as we're not using primary key http://jinzhu.me/gorm/crud.html#delete
+	err := a.rawDelete(a.db, line) // can't use db.Delete as we're not using primary key http://jinzhu.me/gorm/crud.html#delete
 	return err
 }
 
@@ -515,7 +517,7 @@ func (a *Adapter) RemovePolicies(sec string, ptype string, rules [][]string) err
 	return a.db.Transaction(func(tx *gorm.DB) error {
 		for _, rule := range rules {
 			line := a.savePolicyLine(ptype, rule)
-			if err := a.rawDelete(tx, line); err != nil { //can't use db.Delete as we're not using primary key http://jinzhu.me/gorm/crud.html#delete
+			if err := a.rawDelete(tx, line); err != nil { // can't use db.Delete as we're not using primary key http://jinzhu.me/gorm/crud.html#delete
 				return err
 			}
 		}
