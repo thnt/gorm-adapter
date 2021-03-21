@@ -110,7 +110,7 @@ func initAdapterWithGormInstance(t *testing.T, db *gorm.DB) *Adapter {
 }
 
 func initAdapterWithGormInstanceAndCustomTable(t *testing.T, db *gorm.DB) *Adapter {
-	type CasbinRule struct {
+	type MyCasbinRule struct {
 		ID    uint   `gorm:"primaryKey;autoIncrement"`
 		Ptype string `gorm:"size:128;uniqueIndex:unique_index"`
 		V0    string `gorm:"size:128;uniqueIndex:unique_index"`
@@ -122,7 +122,7 @@ func initAdapterWithGormInstanceAndCustomTable(t *testing.T, db *gorm.DB) *Adapt
 	}
 
 	// Create an adapter
-	a, _ := NewAdapterByDBWithCustomTable(db, &CasbinRule{})
+	a, _ := NewAdapterByDBWithCustomTable(db, &MyCasbinRule{})
 	// Initialize some policy in DB.
 	initPolicy(t, a)
 	// Now the DB has policy, so we can provide a normal use case.
@@ -133,7 +133,7 @@ func initAdapterWithGormInstanceAndCustomTable(t *testing.T, db *gorm.DB) *Adapt
 }
 
 func initAdapterWithGormInstanceByName(t *testing.T, db *gorm.DB, name string) *Adapter {
-	//Create an Adapter
+	// Create an Adapter
 	a, _ := NewAdapterByDBUseTableName(db, "", name)
 	// Initialize some policy in DB.
 	initPolicy(t, a)
@@ -145,7 +145,7 @@ func initAdapterWithGormInstanceByName(t *testing.T, db *gorm.DB, name string) *
 }
 
 func initAdapterWithGormInstanceByPrefixAndName(t *testing.T, db *gorm.DB, prefix, name string) *Adapter {
-	//Create an Adapter
+	// Create an Adapter
 	a, _ := NewAdapterByDBUseTableName(db, prefix, name)
 	// Initialize some policy in DB.
 	initPolicy(t, a)
@@ -176,7 +176,6 @@ func initAdapterWithGormInstanceByPrefixAndName(t *testing.T, db *gorm.DB, prefi
 //}
 
 func testAutoSave(t *testing.T, a *Adapter) {
-
 	// NewEnforcer() will load the policy automatically.
 	e, _ := casbin.NewEnforcer("examples/rbac_model.conf", a)
 	// AutoSave is enabled by default.
@@ -252,6 +251,8 @@ func TestAdapterWithCustomTable(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+
+	db.Exec("DROP DATABASE IF EXISTS casbin_custom_table")
 
 	if err = db.Exec("CREATE DATABASE casbin_custom_table").Error; err != nil {
 		// 42P04 is	duplicate_database

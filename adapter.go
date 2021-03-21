@@ -204,7 +204,7 @@ func NewAdapterByDBWithCustomTable(db *gorm.DB, t interface{}) (*Adapter, error)
 
 	ctx = context.WithValue(ctx, customTableKey{}, t)
 
-	return NewAdapterByDBUseTableName(db.WithContext(ctx), "", defaultTableName)
+	return NewAdapterByDBUseTableName(db.WithContext(ctx), "", "")
 }
 
 func openDBConnection(driverName, dataSourceName string) (*gorm.DB, error) {
@@ -297,6 +297,10 @@ func (a *Adapter) getFullTableName() string {
 
 func (a *Adapter) casbinRuleTable() func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
+		if t := a.db.Statement.Context.Value(customTableKey{}); t != nil {
+			// using custom table
+			return db.Model(t)
+		}
 		tableName := a.getFullTableName()
 		return db.Table(tableName)
 	}
@@ -305,10 +309,15 @@ func (a *Adapter) casbinRuleTable() func(db *gorm.DB) *gorm.DB {
 func (a *Adapter) createTable() error {
 	t := a.db.Statement.Context.Value(customTableKey{})
 
-	if t == nil {
-		t = a.getTableInstance()
+	if t != nil {
+		if err := a.db.AutoMigrate(t); err != nil {
+			return err
+		}
+		a.db = a.db.Model(t).Session(&gorm.Session{Context: a.db.Statement.Context})
+		return nil
 	}
 
+	t = a.getTableInstance()
 	if err := a.db.AutoMigrate(t); err != nil {
 		return err
 	}
@@ -321,7 +330,7 @@ func (a *Adapter) createTable() error {
 			return err
 		}
 	}
-	
+
 	a.db = a.db.Scopes(a.casbinRuleTable()).Session(&gorm.Session{Context: a.db.Statement.Context})
 	return nil
 }
