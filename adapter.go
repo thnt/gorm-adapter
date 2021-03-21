@@ -338,7 +338,11 @@ func (a *Adapter) createTable() error {
 func (a *Adapter) dropTable() error {
 	t := a.db.Statement.Context.Value(customTableKey{})
 	if t == nil {
-		return a.db.Migrator().DropTable(a.getTableInstance())
+		if err := a.db.Migrator().DropTable(a.getTableInstance()); err != nil {
+			return err
+		}
+		a.db = a.db.Scopes(a.casbinRuleTable()).Session(&gorm.Session{Context: a.db.Statement.Context})
+		return nil
 	}
 
 	return a.db.Migrator().DropTable(t)
