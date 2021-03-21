@@ -639,3 +639,7 @@ func (a *Adapter) UpdatePolicy(sec string, ptype string, oldRule, newPolicy []st
 	err := a.db.Where(queryStr, queryArgs...).Updates(newLine).Error
 	return err
 }
+
+func (a *Adapter) UpdatePolicies(sec string, ptype string, oldRules, newRules [][]string) error {
+	return nil
+}
